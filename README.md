@@ -5,7 +5,9 @@
   <img src="game.png" height="260">
 </p>
 
-Another shitty hardcoded esp hack for tf2 with lags and bugs but working.
+Another shitty hardcoded esp hack now for tf2.
+
+shit by shit by brick by shitty shit by bricky shit
 
 Tested on VAC enabled servers without -insecure
 
@@ -13,7 +15,8 @@ Tested on VAC enabled servers without -insecure
 
 1. Build as x64 DLL
 2. Inject into `tf_win64.exe`
-Use https://github.com/TheCruZ/Simple-Manual-Map-Injector for injection
+
+Better use https://github.com/TheCruZ/Simple-Manual-Map-Injector for injection
 
 ## Build Requirements
 - Visual Studio 2026
