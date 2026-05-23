@@ -79,9 +79,6 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             ImGui_ImplWin32_Init(window);
             ImGui_ImplDX9_Init(pDevice);
 
-            ImGuiIO& io = ImGui::GetIO();
-            io.MouseDrawCursor = true;
-
             oWndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
             init = true;
