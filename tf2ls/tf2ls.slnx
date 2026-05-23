@@ -1,10 +1,10 @@
 <Solution>
   <Configurations>
-    <BuildType Name="Debug" />
-    <BuildType Name="f" />
-    <BuildType Name="Release" />
+    <BuildType Name="build" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="tf2ls.vcxproj" Id="308ed8a3-80fd-4501-899d-9809a2adf79a" />
+  <Project Path="tf2ls.vcxproj" Id="308ed8a3-80fd-4501-899d-9809a2adf79a">
+    <BuildType Project="f" />
+  </Project>
 </Solution>

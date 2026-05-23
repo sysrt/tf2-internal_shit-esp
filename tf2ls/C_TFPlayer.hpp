@@ -8,15 +8,15 @@ public:
 
     uint32_t m_iTeamNum{0};
     uint32_t m_iHealth{0};
-    uint32_t m_iLifeState{ 0 };
-    uint32_t m_iMaxHealth{ 0 };
+    uint32_t m_iLifeState{0};
+    uint32_t m_iMaxHealth{0};
 
     int m_iClass = 0;
     char m_szClassName[32] = {};
 
     //bool m_bIsABot{0};
 
-    Vector3 m_vecOrigin;
+    Vector3 m_vecOrigin{0};
 
     void Update() {
         if (p_Base == NULL) return;

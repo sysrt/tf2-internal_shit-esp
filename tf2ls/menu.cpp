@@ -35,9 +35,6 @@ bool espHealth, espHealthText = false;
 bool espSnaplines = false;
 bool espClassName = false;
 
-bool visualsFov = false;
-float visualsFov_o, visualsFov_n;
-
 bool visualsParts = false;
 float visualsParts_He = 1.f;
 float visualsParts_To = 1.f;
@@ -86,8 +83,6 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             io.MouseDrawCursor = true;
 
             oWndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProc);
-
-            visualsFov_o = *(float*)((uintptr_t)client_dll + 0x112E524);
 
             init = true;
         }
@@ -304,11 +299,6 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             }
         }
 
-        if (visualsFov) {
-            *(float*)((uintptr_t)client_dll + 0x112E524) = visualsFov_n;
-        }
-        else *(float*)((uintptr_t)client_dll + 0x112E524) = visualsFov_o;
-
         if (visualsParts) {
             for (const auto& ent : g_EntityList.TeamR) {
                 *(bool*)(ent.p_Base + 0x11DD) = true;
@@ -360,12 +350,6 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
 
             ImGui::Separator();
             ImGui::Text("Visuals");
-
-            ImGui::Checkbox("Fov Changer", &visualsFov);
-            
-            ImGui::SameLine();
-            ImGui::SliderFloat("##Fov", &visualsFov_n, 110.f, 1.f, " ");
-            
 
             ImGui::Checkbox("Parts Size", &visualsParts);
             ImGui::SliderFloat("Head Scale", &visualsParts_He, 1.f, 50.f);

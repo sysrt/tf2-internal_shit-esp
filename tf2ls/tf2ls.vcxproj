@@ -246,6 +246,7 @@
     <ClInclude Include="ext\minhook\src\trampoline.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="kiero.h" />
+    <ClInclude Include="memory.hpp" />
     <ClInclude Include="menu.hpp" />
     <ClInclude Include="vector.hpp" />
   </ItemGroup>
@@ -263,6 +264,7 @@
     <ClCompile Include="ext\minhook\src\hook.c" />
     <ClCompile Include="ext\minhook\src\trampoline.c" />
     <ClCompile Include="kiero.cpp" />
+    <ClCompile Include="memory.cpp" />
     <ClCompile Include="menu.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
