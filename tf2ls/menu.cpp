@@ -28,6 +28,8 @@ bool show_menu = true;
 C_ClientEntityList g_EntityList;
 
 bool espEnable = false;
+bool espRedTeam = false;
+bool espBlueTeam = false;
 
 bool espBox, espFilledBox = false;
 bool espHealth, espHealthText = false;
@@ -101,197 +103,201 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
         auto draw = ImGui::GetBackgroundDrawList();
 
         if (espEnable) {
-            for (const auto& ent : g_EntityList.TeamR) {
-                Vector3 headPos = ent.m_vecOrigin;
-                headPos.z += 72.0f;
+            if (espRedTeam) {
+                for (const auto& ent : g_EntityList.TeamR) {
+                    Vector3 headPos = ent.m_vecOrigin;
+                    headPos.z += 72.0f;
 
-                Vector3 feetPos = ent.m_vecOrigin;
+                    Vector3 feetPos = ent.m_vecOrigin;
 
-                Vector2 screenHead = C_View::WorldToScreen(headPos);
-                Vector2 screenFeet = C_View::WorldToScreen(feetPos);
+                    Vector2 screenHead = C_View::WorldToScreen(headPos);
+                    Vector2 screenFeet = C_View::WorldToScreen(feetPos);
 
-                if (screenFeet.x <= 0 || screenFeet.y <= 0 ||
-                    screenFeet.x > C_View::width || screenFeet.y > C_View::height)
-                    continue;
+                    if (screenFeet.x <= 0 || screenFeet.y <= 0 ||
+                        screenFeet.x > C_View::width || screenFeet.y > C_View::height)
+                        continue;
 
-                float boxHeight = screenFeet.y - screenHead.y;
-                float boxWidth = boxHeight * 0.45f;
+                    float boxHeight = screenFeet.y - screenHead.y;
+                    float boxWidth = boxHeight * 0.45f;
 
-                ImVec2 topLeft(screenHead.x - boxWidth / 2, screenHead.y);
-                ImVec2 bottomRight(screenHead.x + boxWidth / 2, screenFeet.y);
-                ImVec2 center(screenHead.x, screenHead.y);
+                    ImVec2 topLeft(screenHead.x - boxWidth / 2, screenHead.y);
+                    ImVec2 bottomRight(screenHead.x + boxWidth / 2, screenFeet.y);
+                    ImVec2 center(screenHead.x, screenHead.y);
 
-                ImColor color = ImColor(255, 0, 0, 255);
+                    ImColor color = ImColor(255, 0, 0, 255);
 
-                if (espBox) {
-                    draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, espBoxThickness);
-                }
-
-                if (espFilledBox) {
-                    draw->AddRectFilled(topLeft, bottomRight, ImColor(255, 0, 0, 30));
-                    draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, 1.0f);
-                }
-
-                if (espBox && !espFilledBox) {
-                    float cornerSize = boxWidth * 0.25f;
-                    draw->AddLine(ImVec2(topLeft.x, topLeft.y + cornerSize),
-                        ImVec2(topLeft.x, topLeft.y), color, 2.0f);
-                    draw->AddLine(ImVec2(topLeft.x, topLeft.y),
-                        ImVec2(topLeft.x + cornerSize, topLeft.y), color, 2.0f);
-                    draw->AddLine(ImVec2(bottomRight.x - cornerSize, topLeft.y),
-                        ImVec2(bottomRight.x, topLeft.y), color, 2.0f);
-                    draw->AddLine(ImVec2(bottomRight.x, topLeft.y),
-                        ImVec2(bottomRight.x, topLeft.y + cornerSize), color, 2.0f);
-                    draw->AddLine(ImVec2(topLeft.x, bottomRight.y - cornerSize),
-                        ImVec2(topLeft.x, bottomRight.y), color, 2.0f);
-                    draw->AddLine(ImVec2(topLeft.x, bottomRight.y),
-                        ImVec2(topLeft.x + cornerSize, bottomRight.y), color, 2.0f);
-                    draw->AddLine(ImVec2(bottomRight.x - cornerSize, bottomRight.y),
-                        ImVec2(bottomRight.x, bottomRight.y), color, 2.0f);
-                    draw->AddLine(ImVec2(bottomRight.x, bottomRight.y - cornerSize),
-                        ImVec2(bottomRight.x, bottomRight.y), color, 2.0f);
-                }
-
-                if (espHealth) {
-                    float barWidth = 4.0f;
-                    float barHeight = boxHeight;
-                    ImVec2 barTopLeft(topLeft.x - barWidth - 4, screenHead.y);
-                    ImVec2 barBottomRight(topLeft.x - 4, screenFeet.y);
-
-                    draw->AddRectFilled(barTopLeft, barBottomRight, ImColor(0, 0, 0, 180));
-
-                    float healthPercent = ent.m_iHealth / (float)ent.m_iMaxHealth;
-                    if (healthPercent > 1.0f) healthPercent = 1.0f;
-
-                    float healthHeight = barHeight * healthPercent;
-                    ImVec2 healthBarTop(barTopLeft.x, barBottomRight.y - healthHeight);
-
-                    ImColor healthColor;
-                    if (ent.m_iHealth > ent.m_iMaxHealth)
-                        healthColor = ImColor(0, 0, 255, 255);
-                    else if (healthPercent > 0.5f)
-                        healthColor = ImColor(0, 255, 0, 255);
-                    else if (healthPercent > 0.25f)
-                        healthColor = ImColor(255, 255, 0, 255);
-                    else
-                        healthColor = ImColor(255, 0, 0, 255);
-
-                    draw->AddRectFilled(healthBarTop, barBottomRight, healthColor);
-                    draw->AddRect(barTopLeft, barBottomRight, ImColor(255, 255, 255, 100), 0.0f, 0, 1.0f);
-                }
-
-                if (espSnaplines) {
-                    ImVec2 screenCenter(C_View::width / 2, C_View::height);
-                    draw->AddLine(screenCenter, ImVec2(center.x, screenFeet.y),
-                        ImColor(255, 0, 0, 100), 1.0f);
-                }
-
-                if (espHealthText) {
-                    char healthText[16];
-                    sprintf_s(healthText, "%dHP", ent.m_iHealth);
-                    draw->AddText(ImVec2(center.x - 15, screenFeet.y + 5),
-                        ImColor(255, 255, 255, 255), healthText);
-                }
-
-                if (espClassName) {
-                    char displayName[32];
-                    strcpy_s(displayName, ent.m_szClassName);
-                    if (displayName[0] >= 'a' && displayName[0] <= 'z') {
-                        displayName[0] = displayName[0] - 'a' + 'A';
+                    if (espBox) {
+                        draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, espBoxThickness);
                     }
 
-                    draw->AddText(
-                        ImVec2(center.x - 15, screenHead.y - 20),
-                        ImColor(255, 255, 255, 255),
-                        displayName
-                    );
+                    if (espFilledBox) {
+                        draw->AddRectFilled(topLeft, bottomRight, ImColor(255, 0, 0, 30));
+                        draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, 1.0f);
+                    }
+
+                    if (espBox && !espFilledBox) {
+                        float cornerSize = boxWidth * 0.25f;
+                        draw->AddLine(ImVec2(topLeft.x, topLeft.y + cornerSize),
+                            ImVec2(topLeft.x, topLeft.y), color, 2.0f);
+                        draw->AddLine(ImVec2(topLeft.x, topLeft.y),
+                            ImVec2(topLeft.x + cornerSize, topLeft.y), color, 2.0f);
+                        draw->AddLine(ImVec2(bottomRight.x - cornerSize, topLeft.y),
+                            ImVec2(bottomRight.x, topLeft.y), color, 2.0f);
+                        draw->AddLine(ImVec2(bottomRight.x, topLeft.y),
+                            ImVec2(bottomRight.x, topLeft.y + cornerSize), color, 2.0f);
+                        draw->AddLine(ImVec2(topLeft.x, bottomRight.y - cornerSize),
+                            ImVec2(topLeft.x, bottomRight.y), color, 2.0f);
+                        draw->AddLine(ImVec2(topLeft.x, bottomRight.y),
+                            ImVec2(topLeft.x + cornerSize, bottomRight.y), color, 2.0f);
+                        draw->AddLine(ImVec2(bottomRight.x - cornerSize, bottomRight.y),
+                            ImVec2(bottomRight.x, bottomRight.y), color, 2.0f);
+                        draw->AddLine(ImVec2(bottomRight.x, bottomRight.y - cornerSize),
+                            ImVec2(bottomRight.x, bottomRight.y), color, 2.0f);
+                    }
+
+                    if (espHealth) {
+                        float barWidth = 4.0f;
+                        float barHeight = boxHeight;
+                        ImVec2 barTopLeft(topLeft.x - barWidth - 4, screenHead.y);
+                        ImVec2 barBottomRight(topLeft.x - 4, screenFeet.y);
+
+                        draw->AddRectFilled(barTopLeft, barBottomRight, ImColor(0, 0, 0, 180));
+
+                        float healthPercent = ent.m_iHealth / (float)ent.m_iMaxHealth;
+                        if (healthPercent > 1.0f) healthPercent = 1.0f;
+
+                        float healthHeight = barHeight * healthPercent;
+                        ImVec2 healthBarTop(barTopLeft.x, barBottomRight.y - healthHeight);
+
+                        ImColor healthColor;
+                        if (ent.m_iHealth > ent.m_iMaxHealth)
+                            healthColor = ImColor(0, 0, 255, 255);
+                        else if (healthPercent > 0.5f)
+                            healthColor = ImColor(0, 255, 0, 255);
+                        else if (healthPercent > 0.25f)
+                            healthColor = ImColor(255, 255, 0, 255);
+                        else
+                            healthColor = ImColor(255, 0, 0, 255);
+
+                        draw->AddRectFilled(healthBarTop, barBottomRight, healthColor);
+                        draw->AddRect(barTopLeft, barBottomRight, ImColor(255, 255, 255, 100), 0.0f, 0, 1.0f);
+                    }
+
+                    if (espSnaplines) {
+                        ImVec2 screenCenter(C_View::width / 2, C_View::height);
+                        draw->AddLine(screenCenter, ImVec2(center.x, screenFeet.y),
+                            ImColor(255, 0, 0, 100), 1.0f);
+                    }
+
+                    if (espHealthText) {
+                        char healthText[16];
+                        sprintf_s(healthText, "%dHP", ent.m_iHealth);
+                        draw->AddText(ImVec2(center.x - 15, screenFeet.y + 5),
+                            ImColor(255, 255, 255, 255), healthText);
+                    }
+
+                    if (espClassName) {
+                        char displayName[32];
+                        strcpy_s(displayName, ent.m_szClassName);
+                        if (displayName[0] >= 'a' && displayName[0] <= 'z') {
+                            displayName[0] = displayName[0] - 'a' + 'A';
+                        }
+
+                        draw->AddText(
+                            ImVec2(center.x - 15, screenHead.y - 20),
+                            ImColor(255, 255, 255, 255),
+                            displayName
+                        );
+                    }
                 }
             }
 
-            for (const auto& ent : g_EntityList.TeamB) {
-                Vector3 headPos = ent.m_vecOrigin;
-                headPos.z += 72.0f;
+            if (espBlueTeam) {
+                for (const auto& ent : g_EntityList.TeamB) {
+                    Vector3 headPos = ent.m_vecOrigin;
+                    headPos.z += 72.0f;
 
-                Vector3 feetPos = ent.m_vecOrigin;
+                    Vector3 feetPos = ent.m_vecOrigin;
 
-                Vector2 screenHead = C_View::WorldToScreen(headPos);
-                Vector2 screenFeet = C_View::WorldToScreen(feetPos);
+                    Vector2 screenHead = C_View::WorldToScreen(headPos);
+                    Vector2 screenFeet = C_View::WorldToScreen(feetPos);
 
-                if (screenFeet.x <= 0 || screenFeet.y <= 0 ||
-                    screenFeet.x > C_View::width || screenFeet.y > C_View::height)
-                    continue;
+                    if (screenFeet.x <= 0 || screenFeet.y <= 0 ||
+                        screenFeet.x > C_View::width || screenFeet.y > C_View::height)
+                        continue;
 
-                float boxHeight = screenFeet.y - screenHead.y;
-                float boxWidth = boxHeight * 0.45f;
+                    float boxHeight = screenFeet.y - screenHead.y;
+                    float boxWidth = boxHeight * 0.45f;
 
-                ImVec2 topLeft(screenHead.x - boxWidth / 2, screenHead.y);
-                ImVec2 bottomRight(screenHead.x + boxWidth / 2, screenFeet.y);
-                ImVec2 center(screenHead.x, screenHead.y);
+                    ImVec2 topLeft(screenHead.x - boxWidth / 2, screenHead.y);
+                    ImVec2 bottomRight(screenHead.x + boxWidth / 2, screenFeet.y);
+                    ImVec2 center(screenHead.x, screenHead.y);
 
-                ImColor color = ImColor(0, 100, 255, 255);
+                    ImColor color = ImColor(0, 100, 255, 255);
 
-                if (espBox) {
-                    draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, espBoxThickness);
-                }
-
-                if (espFilledBox) {
-                    draw->AddRectFilled(topLeft, bottomRight, ImColor(0, 100, 255, 30));
-                    draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, 1.0f);
-                }
-
-                if (espHealth) {
-                    float barWidth = 4.0f;
-                    float barHeight = boxHeight;
-                    ImVec2 barTopLeft(topLeft.x - barWidth - 4, screenHead.y);
-                    ImVec2 barBottomRight(topLeft.x - 4, screenFeet.y);
-
-                    draw->AddRectFilled(barTopLeft, barBottomRight, ImColor(0, 0, 0, 180));
-
-                    float healthPercent = ent.m_iHealth / (float)ent.m_iMaxHealth;
-                    if (healthPercent > 1.0f) healthPercent = 1.0f;
-
-                    float healthHeight = barHeight * healthPercent;
-                    ImVec2 healthBarTop(barTopLeft.x, barBottomRight.y - healthHeight);
-
-                    ImColor healthColor;
-                    if (ent.m_iHealth > ent.m_iMaxHealth)
-                        healthColor = ImColor(0, 0, 255, 255);
-                    else if (healthPercent > 0.5f)
-                        healthColor = ImColor(0, 255, 0, 255);
-                    else if (healthPercent > 0.25f)
-                        healthColor = ImColor(255, 255, 0, 255);
-                    else
-                        healthColor = ImColor(255, 0, 0, 255);
-
-                    draw->AddRectFilled(healthBarTop, barBottomRight, healthColor);
-                    draw->AddRect(barTopLeft, barBottomRight, ImColor(255, 255, 255, 100), 0.0f, 0, 1.0f);
-                }
-
-                if (espSnaplines) {
-                    ImVec2 screenCenter(C_View::width / 2, C_View::height);
-                    draw->AddLine(screenCenter, ImVec2(center.x, screenFeet.y),
-                        ImColor(0, 100, 255, 100), 1.0f);
-                }
-
-                if (espHealthText) {
-                    char healthText[16];
-                    sprintf_s(healthText, "%dHP", ent.m_iHealth);
-                    draw->AddText(ImVec2(center.x - 15, screenFeet.y + 5),
-                        ImColor(255, 255, 255, 255), healthText);
-                }
-
-                if (espClassName) {
-                    char displayName[32];
-                    strcpy_s(displayName, ent.m_szClassName);
-                    if (displayName[0] >= 'a' && displayName[0] <= 'z') {
-                        displayName[0] = displayName[0] - 'a' + 'A';
+                    if (espBox) {
+                        draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, espBoxThickness);
                     }
 
-                    draw->AddText(
-                        ImVec2(center.x - 15, screenHead.y - 20),
-                        ImColor(255, 255, 255, 255),
-                        displayName
-                    );
+                    if (espFilledBox) {
+                        draw->AddRectFilled(topLeft, bottomRight, ImColor(0, 100, 255, 30));
+                        draw->AddRect(topLeft, bottomRight, color, 0.0f, 0, 1.0f);
+                    }
+
+                    if (espHealth) {
+                        float barWidth = 4.0f;
+                        float barHeight = boxHeight;
+                        ImVec2 barTopLeft(topLeft.x - barWidth - 4, screenHead.y);
+                        ImVec2 barBottomRight(topLeft.x - 4, screenFeet.y);
+
+                        draw->AddRectFilled(barTopLeft, barBottomRight, ImColor(0, 0, 0, 180));
+
+                        float healthPercent = ent.m_iHealth / (float)ent.m_iMaxHealth;
+                        if (healthPercent > 1.0f) healthPercent = 1.0f;
+
+                        float healthHeight = barHeight * healthPercent;
+                        ImVec2 healthBarTop(barTopLeft.x, barBottomRight.y - healthHeight);
+
+                        ImColor healthColor;
+                        if (ent.m_iHealth > ent.m_iMaxHealth)
+                            healthColor = ImColor(0, 0, 255, 255);
+                        else if (healthPercent > 0.5f)
+                            healthColor = ImColor(0, 255, 0, 255);
+                        else if (healthPercent > 0.25f)
+                            healthColor = ImColor(255, 255, 0, 255);
+                        else
+                            healthColor = ImColor(255, 0, 0, 255);
+
+                        draw->AddRectFilled(healthBarTop, barBottomRight, healthColor);
+                        draw->AddRect(barTopLeft, barBottomRight, ImColor(255, 255, 255, 100), 0.0f, 0, 1.0f);
+                    }
+
+                    if (espSnaplines) {
+                        ImVec2 screenCenter(C_View::width / 2, C_View::height);
+                        draw->AddLine(screenCenter, ImVec2(center.x, screenFeet.y),
+                            ImColor(0, 100, 255, 100), 1.0f);
+                    }
+
+                    if (espHealthText) {
+                        char healthText[16];
+                        sprintf_s(healthText, "%dHP", ent.m_iHealth);
+                        draw->AddText(ImVec2(center.x - 15, screenFeet.y + 5),
+                            ImColor(255, 255, 255, 255), healthText);
+                    }
+
+                    if (espClassName) {
+                        char displayName[32];
+                        strcpy_s(displayName, ent.m_szClassName);
+                        if (displayName[0] >= 'a' && displayName[0] <= 'z') {
+                            displayName[0] = displayName[0] - 'a' + 'A';
+                        }
+
+                        draw->AddText(
+                            ImVec2(center.x - 15, screenHead.y - 20),
+                            ImColor(255, 255, 255, 255),
+                            displayName
+                        );
+                    }
                 }
             }
         }
@@ -329,6 +335,11 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             ImGui::Begin("NiggaMoves", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize);
 
             ImGui::Checkbox("ESP Enable", &espEnable);
+            ImGui::SameLine();
+            ImGui::Checkbox("Red", &espRedTeam);
+            ImGui::SameLine();
+            ImGui::Checkbox("Blue", &espBlueTeam);
+            
             ImGui::Separator();
 
             ImGui::Checkbox("Box", &espBox);
