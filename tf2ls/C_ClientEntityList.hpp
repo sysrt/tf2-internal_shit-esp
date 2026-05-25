@@ -4,8 +4,8 @@
 #include "C_TFPlayer.hpp"
 #include "memory.hpp"
 
-#define RED 2
-#define BLUE 3
+constexpr unsigned int RED_TEAM = 2;
+constexpr unsigned int BLUE_TEAM = 3;
 
 class C_ClientEntityList {
 private:
@@ -42,11 +42,6 @@ private:
         m_bInitialized = (m_entityList != 00 && m_localplayer != 00);
     }
 
-    uintptr_t GetLocalPlayer() {
-        if (!m_localplayer) return 0;
-        return *reinterpret_cast<uintptr_t*>(m_localplayer);
-    }
-
 public:
     std::vector<C_Entity> TeamB;
     std::vector<C_Entity> TeamR;
@@ -61,9 +56,10 @@ public:
         TeamR.clear();
 
         uintptr_t entityList = *reinterpret_cast<uintptr_t*>(&m_entityList);
+
         uintptr_t localPlayer = GetLocalPlayer();
 
-        if (!entityList || !localPlayer) return;
+        if (!entityList) return;
 
         TeamB.reserve(32);
         TeamR.reserve(32);
@@ -79,12 +75,24 @@ public:
             ent.p_Base = entityPtr;
             ent.Update();
 
+
             if (!ent.IsValid()) continue;
 
-            if (ent.m_iTeamNum == RED)
+            if (ent.m_iTeamNum == RED_TEAM)
                 TeamR.push_back(ent);
-            else if (ent.m_iTeamNum == BLUE)
+            else if (ent.m_iTeamNum == BLUE_TEAM)
                 TeamB.push_back(ent);
         }
+    }
+
+    int GetLocalTeam() {
+        uintptr_t localPlayer = GetLocalPlayer();
+        if (!localPlayer) return 0;
+        return *(uint32_t*)(localPlayer + 0xEC);
+    }
+
+    uintptr_t GetLocalPlayer() {
+        if (!m_localplayer) return 0;
+        return *reinterpret_cast<uintptr_t*>(m_localplayer);
     }
 };
