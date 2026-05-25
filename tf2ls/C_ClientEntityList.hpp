@@ -73,10 +73,12 @@ public:
 
             C_Entity ent;
             ent.p_Base = entityPtr;
+
             ent.Update();
 
-
             if (!ent.IsValid()) continue;
+
+            if (ent.IsDormant()) continue;
 
             if (ent.m_iTeamNum == RED_TEAM)
                 TeamR.push_back(ent);

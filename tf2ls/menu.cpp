@@ -13,6 +13,46 @@
 #include "C_TFPlayer.hpp"
 #include "C_ClientEntityList.hpp"
 
+struct SkeletonMap {
+    int head;
+    int neck;
+    int shoulder_L;
+    int shoulder_R;
+    int elbow_L;
+    int elbow_R;
+    int palm_L;
+    int palm_R;
+    int root;
+    int hip_L;
+    int hip_R;
+    int knee_L;
+    int knee_R;
+    int foot_L;
+    int foot_R;
+};
+
+SkeletonMap g_BoneMaps[10] = {
+    {0},
+
+    {6,5,9,10,11,12,19,20,0,13,14,15,16,17,18}, // 1 scout
+
+    {6,5,9,10,11,12,19,20,0,13,14,15,16,17,18}, // 2 sniper
+
+    {32,6,9,10,11,12,19,20,0,13,14,15,16,17,18}, // 3 soldier
+
+    {16,5,6,8,19,14,17,20,1,9,11,10,12,25,26}, // 4 demoman
+
+    {6,5,9,10,11,12,17,18,0,13,14,15,16,34,35}, // 5 medic
+
+    {6,5,9,10,11,12,17,18,0,13,14,15,16,29,30}, // 6 heavy
+
+    {6,5,8,12,9,13,10,14,0,15,19,16,20,17,21}, // 7 pyro
+
+    {6,5,10,11,12,13,14,15,0,16,17,18,19,20,21}, // 8 spy
+
+    {61,8,12,15,13,16,20,19,0,9,1,10,2,17,18}  // 9 engineer
+};
+
 typedef long(__stdcall* Reset)(LPDIRECT3DDEVICE9, D3DPRESENT_PARAMETERS*);
 Reset oReset = NULL;
 
@@ -37,6 +77,8 @@ bool espHealth, espHealthText = false;
 bool espSnaplines = false;
 bool espClassName = false;
 
+bool espSkeleton = false;
+
 bool visualsParts = false;
 Vector3 fvisualsParts = Vector3(1.f, 1.f, 1.f);
 
@@ -49,10 +91,57 @@ void SetScale(C_Entity ent, Vector3 scale) {
     *(float*)(ent.p_Base + 0x39F8) = scale.z;
 }
 
+void DrawSkeleton(C_Entity& ent, ImColor color) {
+    if (!ent.m_bBonesUpdated) return;
+    if (ent.m_iClass < 1 || ent.m_iClass > 9) return;
+
+    auto& map = g_BoneMaps[ent.m_iClass];
+    auto draw = ImGui::GetBackgroundDrawList();
+
+    int* b = (int*)&map;
+
+    struct Conn { int from; int to; };
+    Conn connections[] = {
+        {0, 1},   // head → neck
+        {1, 8},   // neck → root
+        {1, 2},   // neck → shoulder_L
+        {1, 3},   // neck → shoulder_R
+        {2, 4},   // shoulder_L → elbow_L
+        {3, 5},   // shoulder_R → elbow_R
+        {4, 6},   // elbow_L → palm_L
+        {5, 7},   // elbow_R → palm_R
+        {8, 9},   // root → hip_L
+        {8, 10},  // root → hip_R
+        {9, 11},  // hip_L → knee_L
+        {10, 12}, // hip_R → knee_R
+        {11, 13}, // knee_L → foot_L
+        {12, 14} // knee_R → foot_R
+    };
+
+    for (const auto& conn : connections) {
+        Vector3 from = ent.GetBonePosition(b[conn.from]);
+        Vector3 to = ent.GetBonePosition(b[conn.to]);
+
+        Vector2 sFrom = C_View::WorldToScreen(from);
+        Vector2 sTo = C_View::WorldToScreen(to);
+
+        if (sFrom.x <= 0 || sFrom.y <= 0 || sTo.x <= 0 || sTo.y <= 0) continue;
+        if (sFrom.x > C_View::width || sFrom.y > C_View::height) continue;
+        if (sTo.x > C_View::width || sTo.y > C_View::height) continue;
+
+        Vector2 head = C_View::WorldToScreen(ent.GetBonePosition(b[0]));
+
+        draw->AddLine(ImVec2(sFrom.x, sFrom.y), ImVec2(sTo.x, sTo.y), color, 1.5f);
+    }
+}
+
 void DrawEntity(C_Entity ent, int team) {
     auto draw = ImGui::GetBackgroundDrawList();
-    Vector3 headPos = ent.m_vecOrigin;
-    headPos.z += 72.0f;
+
+    auto& map = g_BoneMaps[ent.m_iClass];
+    int* b = (int*)&map;
+
+    Vector3 headPos = ent.GetBonePosition(b[0]);
 
     Vector3 feetPos = ent.m_vecOrigin;
 
@@ -77,7 +166,7 @@ void DrawEntity(C_Entity ent, int team) {
         colorBox = ImColor(255, 0, 0, 30);
         colorSnap = ImColor(255, 0, 0, 100);
     }
-    else if (team == BLUE_TEAM){
+    else if (team == BLUE_TEAM) {
         color = ImColor(0, 0, 255, 255);
         colorBox = ImColor(0, 0, 255, 30);
         colorSnap = ImColor(0, 0, 255, 100);
@@ -165,6 +254,10 @@ void DrawEntity(C_Entity ent, int team) {
             ImColor(255, 255, 255, 255),
             displayName
         );
+    }
+
+    if (espSkeleton) {
+        DrawSkeleton(ent, color);
     }
 }
 
@@ -269,11 +362,11 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
 
             ImGui::Checkbox("ESP Enable", &espEnable);
 
+            ImGui::Separator();
+
             ImGui::Checkbox("Enemy", &espEnemy);
             ImGui::SameLine();
             ImGui::Checkbox("Team", &espTeam);
-            
-            ImGui::Separator();
 
             ImGui::Checkbox("Box", &espBox);
             ImGui::SameLine();
@@ -286,6 +379,8 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             ImGui::Checkbox("Snaplines", &espSnaplines);
 
             ImGui::Checkbox("Class Name", &espClassName);
+
+            ImGui::Checkbox("Skeleton", &espSkeleton);
 
             ImGui::SliderFloat("Box Thickness", &espBoxThickness, 0.5f, 3.0f);
 
