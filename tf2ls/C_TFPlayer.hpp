@@ -52,7 +52,7 @@ public:
                     if (strstr(m_szClassName, "scout")) m_iClass = 1;
                     else if (strstr(m_szClassName, "sniper")) m_iClass = 2;
                     else if (strstr(m_szClassName, "soldier")) m_iClass = 3;
-                    else if (strstr(m_szClassName, "demoman")) m_iClass = 4;
+                    else if (strstr(m_szClassName, "demo")) m_iClass = 4;
                     else if (strstr(m_szClassName, "medic")) m_iClass = 5;
                     else if (strstr(m_szClassName, "heavy")) m_iClass = 6;
                     else if (strstr(m_szClassName, "pyro")) m_iClass = 7;

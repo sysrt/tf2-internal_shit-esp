@@ -40,7 +40,7 @@ SkeletonMap g_BoneMaps[10] = {
 
     {32,6,9,10,11,12,19,20,0,13,14,15,16,17,18}, // 3 soldier
 
-    {16,5,6,8,19,14,17,20,1,9,11,10,12,25,26}, // 4 demoman
+    {16,15,6,8,19,14,17,20,1,9,11,10,12,25,26}, // 4 demoman
 
     {6,5,9,10,11,12,17,18,0,13,14,15,16,34,35}, // 5 medic
 
@@ -91,7 +91,7 @@ void SetScale(C_Entity ent, Vector3 scale) {
     *(float*)(ent.p_Base + 0x39F8) = scale.z;
 }
 
-void DrawSkeleton(C_Entity& ent, ImColor color) {
+void DrawSkeleton(C_Entity& ent, ImColor color, Vector2 screenHead, float boxHeight) {
     if (!ent.m_bBonesUpdated) return;
     if (ent.m_iClass < 1 || ent.m_iClass > 9) return;
 
@@ -118,6 +118,11 @@ void DrawSkeleton(C_Entity& ent, ImColor color) {
         {12, 14} // knee_R → foot_R
     };
 
+    float circleRadius = boxHeight * 0.15f;
+    if (circleRadius > 4.0f)  circleRadius = 5.0f;
+
+    draw->AddCircle(ImVec2(screenHead.x, screenHead.y), circleRadius, color, 12, 0.1f);
+
     for (const auto& conn : connections) {
         Vector3 from = ent.GetBonePosition(b[conn.from]);
         Vector3 to = ent.GetBonePosition(b[conn.to]);
@@ -129,24 +134,24 @@ void DrawSkeleton(C_Entity& ent, ImColor color) {
         if (sFrom.x > C_View::width || sFrom.y > C_View::height) continue;
         if (sTo.x > C_View::width || sTo.y > C_View::height) continue;
 
-        Vector2 head = C_View::WorldToScreen(ent.GetBonePosition(b[0]));
-
-        draw->AddLine(ImVec2(sFrom.x, sFrom.y), ImVec2(sTo.x, sTo.y), color, 1.5f);
+        draw->AddLine(ImVec2(sFrom.x, sFrom.y), ImVec2(sTo.x, sTo.y), color, 0.1f);
     }
 }
 
-void DrawEntity(C_Entity ent, int team) {
+void DrawEntity(C_Entity ent) {
     auto draw = ImGui::GetBackgroundDrawList();
 
     auto& map = g_BoneMaps[ent.m_iClass];
     int* b = (int*)&map;
 
-    Vector3 headPos = ent.GetBonePosition(b[0]);
+    Vector3 headPos = ent.m_vecOrigin;
+    headPos.z += 78.0f;
 
     Vector3 feetPos = ent.m_vecOrigin;
 
     Vector2 screenHead = C_View::WorldToScreen(headPos);
     Vector2 screenFeet = C_View::WorldToScreen(feetPos);
+
 
     if (screenFeet.x <= 0 || screenFeet.y <= 0 ||
         screenFeet.x > C_View::width || screenFeet.y > C_View::height)
@@ -159,21 +164,12 @@ void DrawEntity(C_Entity ent, int team) {
     ImVec2 bottomRight(screenHead.x + boxWidth / 2, screenFeet.y);
     ImVec2 center(screenHead.x, screenHead.y);
 
-    ImColor color, colorBox, colorSnap;
-
-    if (team == RED_TEAM) {
-        color = ImColor(255, 0, 0, 255);
-        colorBox = ImColor(255, 0, 0, 30);
-        colorSnap = ImColor(255, 0, 0, 100);
-    }
-    else if (team == BLUE_TEAM) {
-        color = ImColor(0, 0, 255, 255);
-        colorBox = ImColor(0, 0, 255, 30);
-        colorSnap = ImColor(0, 0, 255, 100);
-    }
-
+    ImColor color = ImColor(ent.m_iTeamNum == RED_TEAM ? 255 : 0, 0, ent.m_iTeamNum == BLUE_TEAM ? 255 : 0, 255);
+    ImColor colorBox = ImColor(ent.m_iTeamNum == RED_TEAM ? 255 : 0, 0, ent.m_iTeamNum == BLUE_TEAM ? 255 : 0, 30);
+    ImColor colorSnap = ImColor(ent.m_iTeamNum == RED_TEAM ? 255 : 0, 0, ent.m_iTeamNum == BLUE_TEAM ? 255 : 0, 100);
+    
     if (espBox) {
-        draw->AddRect(topLeft, bottomRight, colorBox, 0.0f, 0, espBoxThickness);
+        draw->AddRect(topLeft, bottomRight, colorBox, 0.0f, 0, espBoxThickness * 0.5f);
     }
 
     if (espFilledBox) {
@@ -257,7 +253,7 @@ void DrawEntity(C_Entity ent, int team) {
     }
 
     if (espSkeleton) {
-        DrawSkeleton(ent, color);
+        DrawSkeleton(ent, ImColor(255, 255, 255, 255), C_View::WorldToScreen(ent.GetBonePosition(b[0])), boxHeight);
     }
 }
 
@@ -294,6 +290,8 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             if (window == NULL) window = GetForegroundWindow();
 
             ImGui::CreateContext();
+            ApplyStyle();
+
             ImGui_ImplWin32_Init(window);
             ImGui_ImplDX9_Init(pDevice);
 
@@ -309,8 +307,6 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
 
     if (init)
     {
-        uint32_t nlocalTeam = 0;
-
         g_EntityList.Update();
 
         C_View::Update();
@@ -320,20 +316,21 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
         ImGui::NewFrame();
 
         if (espEnable) {
+            uint32_t nlocalTeam = 0;
             int localTeam = g_EntityList.GetLocalTeam();
 
             if (espEnemy || espTeam) {
                 if (espEnemy) {
                     if (localTeam == RED_TEAM)
-                        for (const auto& ent : g_EntityList.TeamB) DrawEntity(ent, BLUE_TEAM);
+                        for (const auto& ent : g_EntityList.TeamB) DrawEntity(ent);
                     else if (localTeam == BLUE_TEAM)
-                        for (const auto& ent : g_EntityList.TeamR) DrawEntity(ent, RED_TEAM);
+                        for (const auto& ent : g_EntityList.TeamR) DrawEntity(ent);
                 }
                 if (espTeam) {
                     if (localTeam == RED_TEAM)
-                        for (const auto& ent : g_EntityList.TeamR) DrawEntity(ent, RED_TEAM);
+                        for (const auto& ent : g_EntityList.TeamR) DrawEntity(ent);
                     else if (localTeam == BLUE_TEAM)
-                        for (const auto& ent : g_EntityList.TeamB) DrawEntity(ent, BLUE_TEAM);
+                        for (const auto& ent : g_EntityList.TeamB) DrawEntity(ent);
                 }
             }
         }
@@ -401,6 +398,43 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
     }
 
     return oPresent(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
+}
+
+void ApplyStyle() {
+    ImGuiStyle& s = ImGui::GetStyle();
+
+    s.Colors[ImGuiCol_WindowBg] = ImVec4(0.04f, 0.04f, 0.04f, 0.94f);
+    s.Colors[ImGuiCol_TitleBg] = ImVec4(0.03f, 0.03f, 0.03f, 1.00f);
+    s.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+    s.Colors[ImGuiCol_FrameBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    s.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    s.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    s.Colors[ImGuiCol_Button] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    s.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
+    s.Colors[ImGuiCol_ButtonActive] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+    s.Colors[ImGuiCol_Header] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    s.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    s.Colors[ImGuiCol_HeaderActive] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    s.Colors[ImGuiCol_CheckMark] = ImVec4(0.70f, 0.70f, 0.70f, 1.00f);
+    s.Colors[ImGuiCol_SliderGrab] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+    s.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.45f, 0.45f, 0.45f, 1.00f);
+    s.Colors[ImGuiCol_Text] = ImVec4(0.85f, 0.85f, 0.85f, 1.00f);
+    s.Colors[ImGuiCol_Border] = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
+    s.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    s.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+    s.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+
+    s.WindowRounding = 6.0f;
+    s.FrameRounding = 4.0f;
+    s.GrabRounding = 3.0f;
+    s.ChildRounding = 4.0f;
+    s.PopupRounding = 3.0f;
+    s.ScrollbarRounding = 8.0f;
+
+    s.WindowPadding = ImVec2(10.0f, 10.0f);
+    s.FramePadding = ImVec2(6.0f, 4.0f);
+    s.ItemSpacing = ImVec2(8.0f, 6.0f);
+    s.ItemInnerSpacing = ImVec2(6.0f, 4.0f);
 }
 
 void InitMenu()
