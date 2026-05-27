@@ -147,12 +147,11 @@ void DrawEntity(C_Entity ent) {
     int* b = (int*)&map;
 
     bool isSpy = (ent.m_iClass == 8);
-
-    Vector3 rootPos = ent.GetBonePosition(b[8]);
-
+    
     Vector3 headPos, feetPos;
 
     if (!espInterpolate) {
+        Vector3 rootPos = ent.GetBonePosition(b[8]);
         headPos = isSpy ? ent.m_vecOrigin : rootPos;
         headPos.z += isSpy ? 72.0f : 57.0f;
 
