@@ -68,6 +68,8 @@ bool show_menu = true;
 C_ClientEntityList g_EntityList;
 
 bool espEnable = false;
+bool espInterpolate = false;
+
 bool espEnemy = false;
 bool espTeam = false;
 
@@ -119,7 +121,7 @@ void DrawSkeleton(C_Entity& ent, ImColor color, Vector2 screenHead, float boxHei
     };
 
     float circleRadius = boxHeight * 0.15f;
-    if (circleRadius > 4.0f)  circleRadius = 5.0f;
+    if (circleRadius > 4.0f)  circleRadius = 4.0f;
 
     draw->AddCircle(ImVec2(screenHead.x, screenHead.y), circleRadius, color, 12, 0.1f);
 
@@ -144,10 +146,25 @@ void DrawEntity(C_Entity ent) {
     auto& map = g_BoneMaps[ent.m_iClass];
     int* b = (int*)&map;
 
-    Vector3 headPos = ent.m_vecOrigin;
-    headPos.z += 78.0f;
+    bool isSpy = (ent.m_iClass == 8);
 
-    Vector3 feetPos = ent.m_vecOrigin;
+    Vector3 rootPos = ent.GetBonePosition(b[8]);
+
+    Vector3 headPos, feetPos;
+
+    if (!espInterpolate) {
+        headPos = isSpy ? ent.m_vecOrigin : rootPos;
+        headPos.z += isSpy ? 72.0f : 57.0f;
+
+        feetPos = isSpy ? ent.m_vecOrigin : rootPos;
+        feetPos.z -= isSpy ? 0.0f : 58.0f;
+    }
+    else {
+        headPos = ent.m_vecOriginInterpolated;
+        headPos.z += 72.0f;
+
+        feetPos = ent.m_vecOriginInterpolated;
+    }
 
     Vector2 screenHead = C_View::WorldToScreen(headPos);
     Vector2 screenFeet = C_View::WorldToScreen(feetPos);
@@ -356,8 +373,13 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
 
         if (show_menu) {
             ImGui::Begin("NiggaMoves", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize);
-
+            
             ImGui::Checkbox("ESP Enable", &espEnable);
+
+            if (espEnable) {
+                ImGui::Checkbox("Interpolated positions", &espInterpolate);
+                ImGui::TextDisabled("Enable if boxes jittering");
+            }
 
             ImGui::Separator();
 
@@ -388,6 +410,8 @@ long __stdcall hkPresent(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, con
             ImGui::SliderFloat("Head Scale", &fvisualsParts.x, 1.f, 50.f);
             ImGui::SliderFloat("Torso Scale", &fvisualsParts.y, 1.f, 50.f);
             ImGui::SliderFloat("Hand Scale", &fvisualsParts.z, 1.f, 50.f);
+
+            ImGui::Separator();
 
             ImGui::End();
         }
@@ -440,7 +464,7 @@ void ApplyStyle() {
 void InitMenu()
 {
     Sleep(5000);
-    MessageBoxA(0, "click OK once fully loaded", "load", MB_OK);
+    MessageBoxA(0, "Son 😭 Folk 😭 Sonkey 😭", "load", MB_OK);
 
     client_dll = GetModuleHandleA("client.dll");
     engine_dll = GetModuleHandleA("engine.dll");

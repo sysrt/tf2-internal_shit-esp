@@ -24,6 +24,7 @@ public:
     char m_szClassName[32] = {};
 
     Vector3 m_vecOrigin{ 0 };
+    Vector3 m_vecOriginInterpolated{ 0 };
 
     static constexpr int MAX_BONES = 96;
     Vector3 m_BonePositions[MAX_BONES];
@@ -39,6 +40,20 @@ public:
         m_iLifeState = *(uint32_t*)(p_Base + 0xE0);
         m_iMaxHealth = *(uint32_t*)(p_Base + 0x1E08);
         m_iDormant = *(uint8_t*)(p_Base + 0x230);
+
+        UpdateBones();
+
+        m_vecOrigin = {
+            *(float*)(p_Base + 0x338),
+            *(float*)(p_Base + 0x33C),
+            *(float*)(p_Base + 0x340)
+        };
+
+        m_vecOriginInterpolated = {
+            *(float*)(p_Base + 0x458),
+            * (float*)(p_Base + 0x45C),
+            * (float*)(p_Base + 0x460)
+        };
 
         memset(m_szClassName, 0, sizeof(m_szClassName));
 
@@ -64,14 +79,6 @@ public:
         __except (EXCEPTION_EXECUTE_HANDLER) {
             strcpy_s(m_szClassName, "Unknown");
         }
-
-        m_vecOrigin = {
-            *(float*)(p_Base + 0x338),
-            *(float*)(p_Base + 0x33C),
-            *(float*)(p_Base + 0x340)
-        };
-
-        UpdateBones();
     }
 
     void UpdateBones() {
