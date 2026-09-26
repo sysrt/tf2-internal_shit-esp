@@ -1,4 +1,4 @@
-# tf2-internal_shit-esp [![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/bzeKvHJWhN)
+# tf2-internal_shit-esp
 
 <p align="center">
   <img src="menu.png" height="260">
